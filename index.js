@@ -1,24 +1,48 @@
 const express = require("express");
-const cors = require("cors"); // Enable CORS
+const bodyParser = require("body-parser");
 const app = express();
 
 // Middleware
-app.use(cors()); // Allow cross-origin requests
-app.use(express.json()); // Replace bodyParser.json()
+app.use(bodyParser.json());
 
-// Webhook Endpoint
+// Webhook to receive events
 app.post("/webhook", (req, res) => {
-  console.log("🔹 Received Event Data:", req.body);
-  console.log("🔹 Headers:", req.headers);
+    const eventData = req.body;
 
-  res.status(200).json({ message: "Webhook received successfully" });
+    // Validate event data
+    if (!eventData || !eventData.event) {
+        return res.status(400).send("Invalid event data");
+    }
+
+    console.log("📩 Received Event Data:", eventData);
+
+    // Handle DepositReceived event
+    if (eventData.event === "DepositReceived") {
+        // Validate required fields
+        if (!eventData.matchId || !eventData.player || !eventData.offchainId || !eventData.amount) {
+            return res.status(400).send("Missing required fields in event data");
+        }
+
+        console.log(`✅ Deposit Event - Match ID: ${eventData.matchId}`);
+        console.log(`   Player Address: ${eventData.player}`);
+        console.log(`   Offchain ID: ${eventData.offchainId}`);
+        console.log(`   Amount Deposited: ${eventData.amount}`);
+
+        // Forward event details to Unity (if needed)
+        // Example: Call a function to send data to Unity
+        // forwardToUnity(eventData);
+    }
+
+    // Send success response
+    res.status(200).send("Webhook received");
 });
 
-// Health Check Endpoint
+// Health check
 app.get("/", (req, res) => {
-  res.send("✅ Webhook server is running");
+    res.send("Webhook server is running");
 });
 
-// Start Server (For Local Testing Only)
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("✅ Server running on port ${PORT}"));
+// Run server
+app.listen(3000, () => {
+    console.log("🚀 Webhook server running on port 3000");
+});
