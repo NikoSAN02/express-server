@@ -1,21 +1,24 @@
 const express = require("express");
-const bodyParser = require("body-parser");
+const cors = require("cors"); // Enable CORS
 const app = express();
 
-app.use(bodyParser.json());
+// Middleware
+app.use(cors()); // Allow cross-origin requests
+app.use(express.json()); // Replace bodyParser.json()
 
+// Webhook Endpoint
 app.post("/webhook", (req, res) => {
-  const eventData = req.body;
-  console.log("Received Event Data:", eventData);
-  // Send notification to your app
-  res.status(200).send("Webhook received");
+  console.log("🔹 Received Event Data:", req.body);
+  console.log("🔹 Headers:", req.headers);
+
+  res.status(200).json({ message: "Webhook received successfully" });
 });
 
-// Health check endpoint
-app.get('/', (req, res) => {
-    res.send('Webhook server is running');
+// Health Check Endpoint
+app.get("/", (req, res) => {
+  res.send("✅ Webhook server is running");
 });
 
-app.listen(3000, () => {
-  console.log("Webhook server running on port 3000");
-});
+// Start Server (For Local Testing Only)
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log("✅ Server running on port ${PORT}"));
