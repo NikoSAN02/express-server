@@ -1,8 +1,10 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const app = express();
+const cors = require("cors"); // Enable CORS
 
 // Middleware
+app.use(cors()); // Allow cross-origin requests
 app.use(bodyParser.json());
 
 // Webhook to receive events
