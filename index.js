@@ -3,41 +3,62 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 
 const app = express();
-
 app.use(cors());
 app.use(bodyParser.json());
 
-// Store events in memory (optional)
-let recentEvents = [];
+// Store events with timestamps
+let blockchainEvents = [];
 
-// Webhook `POST` endpoint (for blockchain event)
+// Webhook endpoint for receiving blockchain events
 app.post("/webhook", (req, res) => {
-    console.log("Received Webhook Request:", req.body);
-
-    const { event, matchId, player, offchainId } = req.body;
-    if (!event || !matchId || !player || !offchainId) {
-        return res.status(400).json({ error: "Missing required fields in event data" });
+    console.log("📥 Received Blockchain Event:", req.body);
+    
+    const eventData = {
+        ...req.body,
+        timestamp: Date.now()
+    };
+    
+    // Add new event to the beginning of the array
+    blockchainEvents.unshift(eventData);
+    
+    // Keep only last 100 events
+    if (blockchainEvents.length > 100) {
+        blockchainEvents = blockchainEvents.slice(0, 100);
     }
-
-    // Store event (for testing `GET` request)
-    recentEvents.push(req.body);
-    if (recentEvents.length > 10) recentEvents.shift(); // Keep the last 10 events
-
-    console.log(`✅ Received ${event} Event | Match: ${matchId} | Player: ${player}`);
-    res.status(200).json({ message: "Webhook received successfully", eventData: req.body });
+    
+    // Log specific events
+    if (eventData.event === "DepositReceived") {
+        console.log(`✅ Deposit Received | Match: ${eventData.matchId} | Player: ${eventData.player}`);
+    } else if (eventData.event === "MatchStarted") {
+        console.log(`🎮 Match Started | Match: ${eventData.matchId}`);
+    }
+    
+    res.status(200).json({ 
+        message: "Event processed successfully", 
+        eventData 
+    });
 });
 
-// ✅ NEW: Add a `GET` route for Unity to fetch data
+// GET endpoint for Unity to fetch events
 app.get("/webhook", (req, res) => {
-    res.status(200).json({ recentEvents });
+    // Get the timestamp from query params (if provided)
+    const lastTimestamp = req.query.since ? parseInt(req.query.since) : 0;
+    
+    // Filter events newer than the timestamp
+    const newEvents = blockchainEvents.filter(event => event.timestamp > lastTimestamp);
+    
+    res.status(200).json({ 
+        events: newEvents,
+        serverTime: Date.now()
+    });
 });
 
-// Health check
+// Health check endpoint
 app.get("/", (req, res) => {
-    res.send("✅ Webhook server is running!");
+    res.send("✅ Blockchain Game Server Running");
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`🚀 Webhook server running on port ${PORT}`);
+    console.log(`🚀 Server running on port ${PORT}`);
 });
