@@ -1,50 +1,42 @@
 const express = require("express");
+const cors = require("cors"); // Import CORS
 const bodyParser = require("body-parser");
-const app = express();
-const cors = require("cors"); // Enable CORS
 
-// Middleware
-app.use(cors()); // Allow cross-origin requests
+const app = express();
+
+// Enable CORS for all routes
+app.use(cors());
+
+// Parse JSON requests
 app.use(bodyParser.json());
 
-// Webhook to receive events
+// Webhook endpoint
 app.post("/webhook", (req, res) => {
-    const eventData = req.body;
+    console.log("Raw Request Body:", req.body); // Debugging
 
-    // Validate event data
-    if (!eventData || !eventData.event) {
-        return res.status(400).send("Invalid event data");
+    const { event, matchId, player, offchainId } = req.body;
+
+    // Validate request data
+    if (!event || !matchId || !player || !offchainId) {
+        console.error("Missing required fields in event data");
+        return res.status(400).json({ error: "Missing required fields in event data" });
     }
 
-    console.log("📩 Received Event Data:", eventData);
+    console.log(`✅ Received ${event} Event`);
+    console.log(`🔹 Match ID: ${matchId}`);
+    console.log(`🔹 Player: ${player}`);
+    console.log(`🔹 Offchain ID: ${offchainId}`);
 
-    // Handle DepositReceived event
-    if (eventData.event === "DepositReceived") {
-        // Validate required fields
-        if (!eventData.matchId || !eventData.player || !eventData.offchainId || !eventData.amount) {
-            return res.status(400).send("Missing required fields in event data");
-        }
-
-        console.log(`✅ Deposit Event - Match ID: ${eventData.matchId}`);
-        console.log(`   Player Address: ${eventData.player}`);
-        console.log(`   Offchain ID: ${eventData.offchainId}`);
-        console.log(`   Amount Deposited: ${eventData.amount}`);
-
-        // Forward event details to Unity (if needed)
-        // Example: Call a function to send data to Unity
-        // forwardToUnity(eventData);
-    }
-
-    // Send success response
-    res.status(200).send("Webhook received");
+    res.status(200).json({ message: "Webhook received successfully", eventData: req.body });
 });
 
-// Health check
+// Health check endpoint
 app.get("/", (req, res) => {
-    res.send("Webhook server is running");
+    res.send("✅ Webhook server is running!");
 });
 
-// Run server
-app.listen(3000, () => {
-    console.log("🚀 Webhook server running on port 3000");
+// Start the server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`🚀 Webhook server running on port ${PORT}`);
 });
