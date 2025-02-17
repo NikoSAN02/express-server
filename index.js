@@ -11,45 +11,36 @@ let blockchainEvents = [];
 
 // Webhook endpoint for receiving blockchain events
 app.post("/webhook", (req, res) => {
-    console.log("📥 Received Blockchain Event:", req.body);
-    
     const eventData = {
         ...req.body,
-        timestamp: Date.now()
+        receivedAt: new Date().toISOString()
     };
     
-    // Add new event to the beginning of the array
+    console.log("📥 Received blockchain event:", JSON.stringify(eventData, null, 2));
+    
     blockchainEvents.unshift(eventData);
     
-    // Keep only last 100 events
-    if (blockchainEvents.length > 100) {
-        blockchainEvents = blockchainEvents.slice(0, 100);
-    }
-    
-    // Log specific events
-    if (eventData.event === "DepositReceived") {
-        console.log(`✅ Deposit Received | Match: ${eventData.matchId} | Player: ${eventData.player}`);
-    } else if (eventData.event === "MatchStarted") {
-        console.log(`🎮 Match Started | Match: ${eventData.matchId}`);
+    // Keep only last 50 events
+    if (blockchainEvents.length > 50) {
+        blockchainEvents = blockchainEvents.slice(0, 50);
     }
     
     res.status(200).json({ 
-        message: "Event processed successfully", 
-        eventData 
+        status: "success",
+        message: "Event received",
+        data: eventData 
     });
 });
 
 // GET endpoint for Unity to fetch events
 app.get("/webhook", (req, res) => {
-    // Get the timestamp from query params (if provided)
-    const lastTimestamp = req.query.since ? parseInt(req.query.since) : 0;
-    
-    // Filter events newer than the timestamp
-    const newEvents = blockchainEvents.filter(event => event.timestamp > lastTimestamp);
+    console.log("📤 Sending events to Unity. Current event count:", blockchainEvents.length);
+    console.log("Events:", JSON.stringify(blockchainEvents, null, 2));
     
     res.status(200).json({ 
-        events: newEvents,
-        serverTime: Date.now()
+        status: "success",
+        events: blockchainEvents,
+        serverTime: new Date().toISOString()
     });
 });
 
