@@ -6,43 +6,61 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-// Store blockchain events
-let blockchainEvents = [];
+// Store deposit events with timestamps
+let depositEvents = [];
 
 // Webhook endpoint for receiving blockchain events
 app.post("/webhook", (req, res) => {
+    const event = req.body;
+
+    // Validate deposit event structure
+    if (
+        !event.eventName || 
+        event.eventName !== "DepositReceived" ||
+        !event.data?.matchId ||
+        !event.data?.player
+    ) {
+        console.log("❌ Rejected non-deposit event:", event);
+        return res.status(400).json({ 
+            status: "error",
+            message: "Invalid deposit event structure"
+        });
+    }
+
+    // Only store valid deposit events
     const eventData = {
-        ...req.body,
+        ...event,
         receivedAt: new Date().toISOString()
     };
     
-    console.log("📥 Received blockchain event:", JSON.stringify(eventData, null, 2));
-
-    blockchainEvents.unshift(eventData);
+    depositEvents.unshift(eventData);
     
     // Keep only last 50 events
-    if (blockchainEvents.length > 50) {
-        blockchainEvents = blockchainEvents.slice(0, 50);
-    }
+    if (depositEvents.length > 50) depositEvents = depositEvents.slice(0, 50);
     
     res.status(200).json({ 
         status: "success",
-        message: "Event received",
-        data: eventData 
+        message: "Deposit event stored"
     });
 });
 
-// GET endpoint for Unity to fetch only "DepositReceived" events
+// GET endpoint for Unity to fetch deposit events
 app.get("/webhook", (req, res) => {
-    const depositEvents = blockchainEvents.filter(event => event.event === "DepositReceived");
-
-    console.log("📤 Sending ONLY deposit events to Unity. Count:", depositEvents.length);
+    console.log("📤 Sending deposit events to Unity. Current event count:", depositEvents.length);
+    console.log("Events:", JSON.stringify(depositEvents, null, 2));
     
     res.status(200).json({ 
         status: "success",
         events: depositEvents,
         serverTime: new Date().toISOString()
     });
+});
+
+// DELETE endpoint to acknowledge processed events
+app.delete("/webhook/:eventId", (req, res) => {
+    const eventId = req.params.eventId;
+    depositEvents = depositEvents.filter(evt => evt.id !== eventId);
+    res.status(200).json({ status: "success" });
 });
 
 // Health check endpoint
