@@ -6,7 +6,7 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-// Store events with timestamps
+// Store blockchain events
 let blockchainEvents = [];
 
 // Webhook endpoint for receiving blockchain events
@@ -17,7 +17,7 @@ app.post("/webhook", (req, res) => {
     };
     
     console.log("📥 Received blockchain event:", JSON.stringify(eventData, null, 2));
-    
+
     blockchainEvents.unshift(eventData);
     
     // Keep only last 50 events
@@ -32,14 +32,15 @@ app.post("/webhook", (req, res) => {
     });
 });
 
-// GET endpoint for Unity to fetch events
+// GET endpoint for Unity to fetch only "DepositReceived" events
 app.get("/webhook", (req, res) => {
-    console.log("📤 Sending events to Unity. Current event count:", blockchainEvents.length);
-    console.log("Events:", JSON.stringify(blockchainEvents, null, 2));
+    const depositEvents = blockchainEvents.filter(event => event.event === "DepositReceived");
+
+    console.log("📤 Sending ONLY deposit events to Unity. Count:", depositEvents.length);
     
     res.status(200).json({ 
         status: "success",
-        events: blockchainEvents,
+        events: depositEvents,
         serverTime: new Date().toISOString()
     });
 });
